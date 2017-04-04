@@ -1,0 +1,91 @@
+###################
+# image-rails5 image is composed of ubuntu, ruby 2.3 and rails 5
+
+##################
+How this image was built:
+
+1) Dockerfile:
+
+  FROM ubuntu:trusty
+      ......
+  RUN apt-get update && \
+    apt-get install -y apt-utils && \
+    apt-get install -y autoconf && \
+      ......
+  RUN git clone --depth 1 https://github.com/sstephenson/rbenv.git /root/.rbenv && \
+      .....
+    rbenv install '2.3.1' && \
+    gem install bundler --no-ri --no-rdoc && \
+    gem install rails -v '>= 5.0.0' --no-ri --no-rdoc && \
+
+  COPY Gemfile Gemfile
+  COPY Gemfile.lock Gemfile.lock
+
+  RUN bundle install
+
+#-------------------------------------------------------------------------------
+2) Local build:
+  $ docker build -t rails5-base .
+    Sending build context to Docker daemon 48.64 kB
+    Step 1/16 : FROM ubuntu:trusty
+        ........
+    Step 7/16 : RUN apt-get update && \
+        ........
+    Step 15/16 : RUN bundle install
+    Successfully built 6b82c52bfbff
+
+  $ docker images
+    REPOSITORY        TAG                 IMAGE ID            CREATED             SIZE
+    rails5-base       latest              6b82c52bfbff        3 minutes ago       647 MB
+    ubuntu            trusty              7c09e61e9035        5 weeks ago         188 MB
+
+#-------------------------------------------------------------------------------
+3) Tag and Push image to DockerHub:
+  $ docker login
+
+  $ docker tag 6b82c52bfbff miadocker/rails5-base:latest
+  $ docker tag 6b82c52bfbff miadocker/rails5-base:latest
+  $ docker images
+    REPOSITORY                   TAG                 IMAGE ID            CREATED             SIZE
+    miadocker/rails5-base        latest              6b82c52bfbff        12 minutes ago      647 MB
+
+  $ docker push miadocker/rails5-base
+    The push refers to a repository [docker.io/miadocker/rails5-base]
+    8790540a8111: Preparing
+      .......
+
+#-------------------------------------------------------------------------------
+4) Run bash shell in locally built container:
+  $ docker run -it miadocker/rails5-base bash
+    root@f784f8daf6f3:/app# ls
+    Gemfile  Gemfile.lock  tmp
+    root@f784f8daf6f3:/app# ruby -v
+    ruby 2.3.1p112 (2016-04-26 revision 54768) [x86_64-linux]
+    root@f784f8daf6f3:/app# rails -v
+    Rails 5.0.2
+    root@f784f8daf6f3:/app# bundle -v
+    Bundler version 1.14.6
+    root@f784f8daf6f3:/app# bundle show rails
+    /root/.rbenv/versions/2.3.1/lib/ruby/gems/2.3.0/gems/rails-5.0.0.1
+    root@f784f8daf6f3:/app# exit
+
+#-------------------------------------------------------------------------------
+5) Delete local copy, pull from DockerHub and run bash shell in container:
+  $ docker rm -f $(docker ps -a -q)
+  $ docker rmi -f $(docker images -q)
+  $ docker images
+    REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+
+  $ docker run -it miadocker/rails5-base bash
+    Unable to find image 'miadocker/rails5-base:latest' locally
+    latest: Pulling from miadocker/rails5-base
+    30d541b48fc0: Pulling fs layer
+        .........
+    Status: Downloaded newer image for miadocker/rails5-base:latest
+    root@d613655b94b3:/app# ls
+    Gemfile  Gemfile.lock  tmp
+    root@d613655b94b3:/app# exit
+
+  $ docker run -it miadocker/rails5-base bash
+    root@59c94a7399f0:/app#
+    root@59c94a7399f0:/app# exit
